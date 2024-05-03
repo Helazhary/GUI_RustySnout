@@ -3,7 +3,7 @@ use gtk::{Application, ApplicationWindow, Button, Label, Box, Orientation, Entry
 use gtk::gdk;
 
 fn main() {
-    let app = Application::new(Some("com.example.BandwichLog"), Default::default());
+    let app = Application::new(Some("com.example.RustySnout"), Default::default());
 
     app.connect_activate(|app| {
         build_ui(app);
@@ -31,7 +31,7 @@ fn build_ui(app: &Application) {
         .build();
 
     let refresh_rate_entry = Entry::builder()
-        .placeholder_text("Enter refresh rate in seconds")
+        .placeholder_text("Enter refresh rate in seconds (Min: 0.5)")
         .build();
     let next_button = Button::builder()
         .label("Next")
@@ -45,23 +45,23 @@ fn build_ui(app: &Application) {
 
     let main_window = ApplicationWindow::builder()
         .application(app)
-        .title("Bandwich Log - Main Window")
+        .title("RustySnout - Main Window")
         .default_width(1000)
         .default_height(600)
         .build();
 
     let content = Box::new(Orientation::Vertical, 5);
     let header_label = Label::builder()
-        .label("IF: all | Total Rate (Up / Down): 2.22KiB / 4.35KiB")
+        .label("--------------------")
         .name("HeaderLabel")
         .build();
     let display_label = Label::builder()
-        .label("Select a button to display its corresponding data.")
+        .label("Select a button to display its corresponding usage data.")
         .build();
 
-    let button1 = Button::builder().label("Firefox").build();
-    let button2 = Button::builder().label("Unknown").build();
-    let button3 = Button::builder().label("Anydesk").build();
+    let button1 = Button::builder().label("Process").build();
+    let button2 = Button::builder().label("Connection").build();
+    let button3 = Button::builder().label("Remote-Address").build();
 
     let buttons_box = Box::new(Orientation::Horizontal, 0);
     buttons_box.set_valign(Align::Center);
@@ -77,8 +77,12 @@ fn build_ui(app: &Application) {
     main_window.set_child(Some(&content));
 
     next_button.connect_clicked(move |_| {
-        let refresh_rate = refresh_rate_entry.text().parse::<u64>().unwrap_or(500); // handle errors properly
-        header_label.set_text(&format!("IF: all | Refresh Rate: {}s | Total Rate (Up / Down): 2.22KiB / 4.35KiB", refresh_rate));
+        let mut refresh_rate = refresh_rate_entry.text().parse::<f64>().unwrap_or(0.5); // handle errors properly
+        //min refresh rate 0.5
+        if (refresh_rate < 0.5) {
+            refresh_rate = 0.5;
+        }
+        header_label.set_text(&format!(" Refresh Rate: {}s", refresh_rate));
         setup_window.hide();
         main_window.show();
     });
@@ -86,21 +90,21 @@ fn build_ui(app: &Application) {
     button1.connect_clicked({
         let display_label = display_label.clone();
         move |_| {
-            display_label.set_label("Process: firefox | Connections: 2 | Rate: 1.87KiB / 4.08KiB");
+            display_label.set_label("Displaying usage data by: Process:");
         }
     });
 
     button2.connect_clicked({
         let display_label = display_label.clone();
         move |_| {
-            display_label.set_label("Process: UNKNOWN | Connections: 3 | Rate: 358.00B / 266.00B");
+            display_label.set_label("Displaying usage data by: Connection:");
         }
     });
 
     button3.connect_clicked({
         let display_label = display_label.clone();
         move |_| {
-            display_label.set_label("Process: anydesk | Connections: 1 | Rate: 6.00B / 6.00B");
+            display_label.set_label("Displaying usage data by: Remote-Address:");
         }
     });
 }
