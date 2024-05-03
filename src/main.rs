@@ -58,6 +58,9 @@ fn build_ui(app: &Application) {
     let display_label = Label::builder()
         .label("Select a button to display its corresponding usage data.")
         .build();
+    let data_label = Label::builder()
+        .label("Data will be displayed here.")
+        .build();
 
     let button1 = Button::builder().label("Process").build();
     let button2 = Button::builder().label("Connection").build();
@@ -73,6 +76,7 @@ fn build_ui(app: &Application) {
     content.append(&header_label);
     content.append(&display_label);
     content.append(&buttons_box);
+    content.append(&data_label);
 
     main_window.set_child(Some(&content));
 
@@ -89,22 +93,28 @@ fn build_ui(app: &Application) {
 
     button1.connect_clicked({
         let display_label = display_label.clone();
+        let data_label = data_label.clone();
         move |_| {
             display_label.set_label("Displaying usage data by: Process:");
+            data_label.set_label("Process Data will be displayed here.");
         }
     });
 
     button2.connect_clicked({
         let display_label = display_label.clone();
+        let data_label = data_label.clone();
         move |_| {
             display_label.set_label("Displaying usage data by: Connection:");
+            data_label.set_label("Connection Data will be displayed here.");
         }
     });
 
     button3.connect_clicked({
         let display_label = display_label.clone();
+        let data_label = data_label.clone();
         move |_| {
             display_label.set_label("Displaying usage data by: Remote-Address:");
+            data_label.set_label("Remote-Address Data will be displayed here.");
         }
     });
 }
