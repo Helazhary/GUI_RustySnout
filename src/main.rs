@@ -1,6 +1,7 @@
 
+use gtk::builders::ConstraintBuilder;
 use gtk::gio::ffi::GOutputVector;
-//use rusqlite::{params, Connection as sqlConnection /* , Result*/};
+
 use rusqlite::{Connection, Result};
 
 use gtk::ffi::gtk_grid_remove_row;
@@ -18,62 +19,78 @@ fn main() -> Result<()> {
 
     
     let mut stmt = conn.prepare("SELECT process_name, time, block_number FROM App")?;
+    let mut stmt2 = conn.prepare("SELECT pid, process_name, up_bps, down_bps, connections, time, block_number FROM processes")?;
+    let mut stmt3 = conn.prepare("SELECT cid, source, destination, protocol, up_bps, down_bps, process_name, time, block_number FROM connections")?;
 
-    // Execute the SELECT query and collect the results into a vector of vectors
-    let mut data: Vec<Vec<String>> = Vec::new();
+
+    let mut data1: Vec<Vec<String>> = Vec::new();
+    let mut data2: Vec<Vec<String>> = Vec::new();
+    let mut data3: Vec<Vec<String>> = Vec::new();    
+
+    //setting  data 1
     let rows = stmt.query_map([], |row| {
         Ok(vec![
             row.get::<_, String>(0)?, // process_name
-            row.get::<_, i64>(1)?.to_string(), // time (convert to string)
+            row.get::<_, i64>(1)?.to_string(), // time 
             row.get::<_, i64>(2)?.to_string(), // block_number
         ])
     })?;
-
-    // Process the results and store them in the vector of vectors
     for row in rows {
-        data.push(row?);
+        data1.push(row?);
     }
 
-    // Now data contains all the rows from the App table
-   // println!("{:?}", data);
+    //setting data 2
+
+    let rows2 = stmt2.query_map([], |row| {
+        Ok(vec![
+            row.get::<_, i64>(0)?.to_string(), // pid
+            row.get::<_, String>(1)?, // process_name
+            row.get::<_, i64>(2)?.to_string(), // up_bps
+            row.get::<_, i64>(3)?.to_string(), // down_bps
+            row.get::<_, i64>(4)?.to_string(), // connections
+            row.get::<_, i64>(5)?.to_string(), // time
+            row.get::<_, i64>(6)?.to_string(), // block_number
+        ])
+    })?;
+    
+    for row in rows2 {
+        data2.push(row?);
+    }
+
+    //setting  data3
+    let rows3 = stmt3.query_map([], |row| {
+        Ok(vec![
+            //row.get::<_, String>(0)?, // cid
+            row.get::<_, String>(1)?, // source
+            row.get::<_, String>(2)?, // destination
+            row.get::<_, String>(3)?, // protocol
+            row.get::<_, i64>(4)?.to_string(),// up_bps
+            row.get::<_, i64>(5)?.to_string(),// down_bps
+            row.get::<_, String>(6)?, //  process_name
+            row.get::<_, i64>(7)?.to_string(),  //time
+            row.get::<_, i64>(8)?.to_string(),  //block_number
+        ])
+    })?;
+
+    let mut i=0;
+    for row in rows3 {
+        // if(i<170){
+        //     data3.push(row?);
+        // }
+        //       i+=1;  
+
+              data3.push(row?);      
+    }
 
 //------------------------------END od DB-----------------------------    
 
-    // let data = vec![
-    //     vec![
-    //         "connection".to_string(),
-    //         "ID".to_string(),
-    //         "Name".to_string(),
-    //         "Size".to_string(),
-    //         "Extra".to_string(),
-    //     ],
-    //     vec![
-    //         "c1".to_string(),
-    //         "0".to_string(),
-    //         "goog".to_string(),
-    //         "20".to_string(),
-    //         "lo".to_string(),
-    //     ],
-    //     vec![
-    //         "c2".to_string(),
-    //         "1".to_string(),
-    //         "firefox".to_string(),
-    //         "30".to_string(),
-    //         "lo".to_string(),
-    //     ],
-    //     vec![
-    //         "c3".to_string(),
-    //         "2".to_string(),
-    //         "amazon".to_string(),
-    //         "50".to_string(),
-    //         "lo".to_string(),
-    //     ],
-    // ];
+
 
     app.connect_activate( move |app| {
-       let shared_content = Arc::new(Mutex::new(data.clone()));
-        
-        build_ui(app, shared_content.clone());
+       let shared_content1 = Arc::new(Mutex::new(data1.clone()));
+       let shared_content2 = Arc::new(Mutex::new(data2.clone()));
+       let shared_content3 = Arc::new(Mutex::new(data3.clone()));        
+        build_ui(app, shared_content1.clone(),shared_content2.clone(),shared_content3.clone());
         
     });
 
@@ -83,7 +100,7 @@ Ok(())
 
 }
 //process_data:Vec<&[&str]>
-fn build_ui(app: &Application, shared_content: Arc<Mutex<Vec<Vec<String>>>>) {
+fn build_ui(app: &Application, shared_content1: Arc<Mutex<Vec<Vec<String>>>>,shared_content2: Arc<Mutex<Vec<Vec<String>>>>,shared_content3: Arc<Mutex<Vec<Vec<String>>>>) {
     let css=b"/* CSS */
     * { font-family: monospace; background-color: #1e1e1e; color: #ffffff; } \
                 #HeaderLabel { color: #00ff00; } \
@@ -186,57 +203,80 @@ fn build_ui(app: &Application, shared_content: Arc<Mutex<Vec<Vec<String>>>>) {
         let display_label = display_label.clone();
         let data_grid = data_grid.clone();
         let label=label.clone();
+        let content1 = shared_content1.lock().unwrap().clone();
         move |_| {
             display_label.set_label("Displaying usage data by: Process:");
             {
-                let content = shared_content.lock().unwrap().clone();
-                        
+                
+//            Clear previous contents of the data grid
+                for j in 0..20{
+                data_grid.remove_row(j);
+                data_grid.remove_column(j)
+            }                        
            // Iterate over the data and populate the grid
-            for (row_index, row) in content.iter().enumerate() {
+            for (row_index, row) in content1.iter().enumerate() {
                 for (col_index, value) in row.iter().enumerate() {
                     let label = Label::new(Some(value));
                     data_grid.attach(&label, col_index as i32, row_index as i32, 1, 1);
                 }
-            }
+            }                
 
-        
-              
-                
             }
     }
     });
 
     // Connect button2
-    // button2.connect_clicked({
-    //     let display_label = display_label.clone();
-    //     let data_grid = data_grid.clone();
-    //     move |_| {
-    //         display_label.set_label("Displaying usage data by: Connection:");
-    //         populate_data_grid(&data_grid, vec![
-    //             &["connection", "ID", "Name", "Size", "Extra"],
-    //             &["c1", "0", "goog", "20", "lo"],
-    //             &["c2", "1", "firefox", "30", "lo"],
-    //             &["c3", "2", "amazon", "50", "lo"],
-    //         ]);
-    //     }
-    // });
+     button2.connect_clicked({
+        let display_label = display_label.clone();
+        let data_grid = data_grid.clone();
+        let label=label.clone();
+        let content2 = shared_content2.lock().unwrap().clone();
+        move |_| {
+            display_label.set_label("Displaying usage data by: Process:");
+            {   
+//            Clear previous contents of the data grid
+                for j in 0..20{
+                data_grid.remove_row(j);
+                data_grid.remove_column(j)
+            }                        
+           // Iterate over the data and populate the grid
+            for (row_index, row) in content2.iter().enumerate() {
+                for (col_index, value) in row.iter().enumerate() {
+                    let label = Label::new(Some(value));
+                    data_grid.attach(&label, col_index as i32, row_index as i32, 1, 1);
+                }
+            }                
+
+            }
+    }
+    });
 
 //     // Connect button3
-//     button3.connect_clicked({
-//         let display_label = display_label.clone();
-//         let data_grid = data_grid.clone();
-//         move |_| {
-//             display_label.set_label("Displaying usage data by: Remote-Address:");
-//             populate_data_grid(&data_grid, vec![
-//                 &["remote", "ID", "Name"],
-//                 &["r1", "0", "goog"],
-//                 &["r2", "1", "firefox"],
-//                 &["r3", "2", "amazon"],
-//             ]);
+    button3.connect_clicked({
+        let display_label = display_label.clone();
+        let data_grid = data_grid.clone();
+        let label=label.clone();
+        let content3 = shared_content3.lock().unwrap().clone();
+        move |_| {
+            display_label.set_label("Displaying usage data by: Process:");
+            {   
+//            Clear previous contents of the data grid
+                for j in 0..20{
+                data_grid.remove_row(j);
+                data_grid.remove_column(j)
+            }                        
+           // Iterate over the data and populate the grid
+            for (row_index, row) in content3.iter().enumerate() {
+                for (col_index, value) in row.iter().enumerate() {
+                    let label = Label::new(Some(value));
+                    data_grid.attach(&label, col_index as i32, row_index as i32, 1, 1);
+                }
+            }                
+            }
+    }
+    });
+}
 
-//         }
-//     });
-// }
 
 
 
@@ -244,9 +284,7 @@ fn build_ui(app: &Application, shared_content: Arc<Mutex<Vec<Vec<String>>>>) {
 
 
 
-
-
-// fn populate_data_grid(label: &Label, shared_content: Arc<Mutex<String>>) {
+ //fn populate_data_grid(label: &Label, data_grid: Grid, contetn:Vec<Vec<std::string::String>>) {
 //     // Clear previous contents of the data grid
 //     //     for j in 0..20{
 //     //     grid.remove_row(j);
@@ -254,19 +292,21 @@ fn build_ui(app: &Application, shared_content: Arc<Mutex<Vec<Vec<String>>>>) {
 //     // }
 
 //     // Iterate over the data and populate the grid
-//     // for (row_index, row) in data.iter().enumerate() {
-//     //     for (col_index, &value) in row.iter().enumerate() {
-//     //         let label = Label::new(Some(value));
-//     //         grid.attach(&label, col_index as i32, row_index as i32, 1, 1);
-//     //     }
-//     // }
+    // for (row_index, row) in data.iter().enumerate() {
+    //     for (col_index, &value) in row.iter().enumerate() {
+    //         let label = Label::new(Some(value));
+    //         grid.attach(&label, col_index as i32, row_index as i32, 1, 1);
+    //     }
+    // }
 
-//     // Set initial text of the label to the shared content
-//     {
-//         let content = shared_content.lock().unwrap().clone();
-//         label.set_text(&content)
-//     }
+    // Set initial text of the label to the shared content
+    // {
+    //     let content = shared_content.lock().unwrap().clone();
+    //     label.set_text(&content)
+    // }
+             
+        
+// }            
 // }
 
-}
 
