@@ -117,7 +117,12 @@ fn build_ui(app: &Application, shared_content1: Arc<Mutex<Vec<Vec<String>>>>,sha
     content.append(&header_label);
     content.append(&display_label);
     content.append(&buttons_box);
-    content.append(&data_grid); 
+    content.append(&data_grid);
+
+    let process_headers = vec!["Process Name", "Time", "Block Number"];
+let connection_headers = vec!["PID", "Process Name", "Upload Bps", "Download Bps", "Connections", "Time", "Block Number"];
+let remote_address_headers = vec![ "Source", "Destination", "Protocol", "Upload Bps", "Download Bps", "Process Name", "Time", "Block Number"];
+
     main_window.set_child(Some(&content));
 
     next_button.connect_clicked(move |_| {
@@ -127,54 +132,98 @@ fn build_ui(app: &Application, shared_content1: Arc<Mutex<Vec<Vec<String>>>>,sha
         main_window.show();
     });
 
-    button1.connect_clicked({
-        let display_label = display_label.clone();
-        let data_grid = data_grid.clone();
-        let content1 = shared_content1.clone();
-        move |_| {
-            display_label.set_label("Displaying usage data by: Process");
-            data_grid.remove_row(0); // Assume only one row for simplicity
-            let data = content1.lock().unwrap();
-            for (i, row) in data.iter().enumerate() {
-                for (j, value) in row.iter().enumerate() {
-                    let label = Label::new(Some(value));
-                    data_grid.attach(&label, j as i32, i as i32, 1, 1);
-                }
-            }
-        }
-    });
+button1.connect_clicked({
+    let display_label = display_label.clone();
+    let data_grid = data_grid.clone();
+    let content1 = shared_content1.clone();
+    let process_headers = process_headers.clone(); // Assuming headers are defined outside
+    move |_| {
+        display_label.set_label("Displaying usage data by: Process");
 
-    button2.connect_clicked({
-        let display_label = display_label.clone();
-        let data_grid = data_grid.clone();
-        let content2 = shared_content2.clone();
-        move |_| {
-            display_label.set_label("Displaying usage data by: Connection");
-            data_grid.remove_row(0); // Assume only one row for simplicity
-            let data = content2.lock().unwrap();
-            for (i, row) in data.iter().enumerate() {
-                for (j, value) in row.iter().enumerate() {
-                    let label = Label::new(Some(value));
-                    data_grid.attach(&label, j as i32, i as i32, 1, 1);
-                }
+         // Properly remove all widgets from the grid
+        let mut child = data_grid.first_child();
+        while let Some(widget) = child {
+            let next = widget.next_sibling(); // Get the next sibling to iterate before removing the current child
+            data_grid.remove(&widget); // Remove each child widget
+            child = next; // Move to the next child
+        }
+        
+        for (j, header) in process_headers.iter().enumerate() {
+            let header_label = Label::builder().label(header).build();
+            data_grid.attach(&header_label, j as i32, 0, 1, 1); // Attach headers at the first row
+        }
+        let data = content1.lock().unwrap();
+        for (i, row) in data.iter().enumerate() {
+            for (j, value) in row.iter().enumerate() {
+                let label = Label::new(Some(value));
+                data_grid.attach(&label, j as i32, (i as i32) + 1, 1, 1); // Offset by one row for headers
             }
         }
-    });
+    }
+});
 
-    button3.connect_clicked({
-        let display_label = display_label.clone();
-        let data_grid = data_grid.clone();
-        let content3 = shared_content3.clone();
-        move |_| {
-            display_label.set_label("Displaying usage data by: Remote-Address");
-            data_grid.remove_row(0); // Assume only one row for simplicity
-            let data = content3.lock().unwrap();
-            for (i, row) in data.iter().enumerate() {
-                for (j, value) in row.iter().enumerate() {
-                    let label = Label::new(Some(value));
-                    data_grid.attach(&label, j as i32, i as i32, 1, 1);
-                }
+button2.connect_clicked({
+    let display_label = display_label.clone();
+    let data_grid = data_grid.clone();
+    let content2 = shared_content2.clone();
+    let connection_headers = connection_headers.clone(); // Assuming headers are defined outside
+    move |_| {
+        display_label.set_label("Displaying usage data by: Connection");
+
+        // Properly remove all widgets from the grid
+        let mut child = data_grid.first_child();
+        while let Some(widget) = child {
+            let next = widget.next_sibling(); // Get the next sibling to iterate before removing the current child
+            data_grid.remove(&widget); // Remove each child widget
+            child = next; // Move to the next child
+        }
+
+        for (j, header) in connection_headers.iter().enumerate() {
+            let header_label = Label::builder().label(header).build();
+            data_grid.attach(&header_label, j as i32, 0, 1, 1); // Attach headers at the first row
+        }
+        let data = content2.lock().unwrap();
+        for (i, row) in data.iter().enumerate() {
+            for (j, value) in row.iter().enumerate() {
+                let label = Label::new(Some(value));
+                data_grid.attach(&label, j as i32, (i as i32) + 1, 1, 1); // Offset by one row for headers
             }
         }
-    });
+    }
+});
+
+
+button3.connect_clicked({
+    let display_label = display_label.clone();
+    let data_grid = data_grid.clone();
+    let content3 = shared_content3.clone();
+    let remote_address_headers = remote_address_headers.clone(); // Ensure headers are cloned or accessible in the closure
+    move |_| {
+        display_label.set_label("Displaying usage data by: Remote-Address");
+
+        // Properly remove all widgets from the grid
+        let mut child = data_grid.first_child();
+        while let Some(widget) = child {
+            let next = widget.next_sibling(); // Get the next sibling to iterate before removing the current child
+            data_grid.remove(&widget); // Remove each child widget
+            child = next; // Move to the next child
+        }
+
+        // Attach new headers at the first row
+        for (j, header) in remote_address_headers.iter().enumerate() {
+            let header_label = gtk::Label::builder().label(header).build();
+            data_grid.attach(&header_label, j as i32, 0, 1, 1);
+        }
+
+        // Retrieve data and display it, offset by one row for headers
+        let data = content3.lock().unwrap();
+        for (i, row) in data.iter().enumerate() {
+            for (j, value) in row.iter().enumerate() {
+                let label = gtk::Label::new(Some(value));
+                data_grid.attach(&label, j as i32, (i as i32) + 1, 1, 1); // Offset by one row for headers
+            }
+        }
+    }
+});
+
 }
